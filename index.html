@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monthly Budget Planner</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 16px;
+    color: #222;
+  }
+  h1 {
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #555;
+  }
+  input, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-danger { background: #dc2626; color: white; margin-top: 6px; }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .balance-positive { color: #16a34a; font-weight: bold; }
+  .balance-negative { color: #dc2626; font-weight: bold; }
+  .expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .expense-item:last-child { border-bottom: none; }
+  .expense-info { font-size: 14px; }
+  .expense-category {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+  }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #dc2626;
+    font-size: 18px;
+    width: auto;
+    padding: 4px 10px;
+  }
+  .empty-msg {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    padding: 12px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>💰 Monthly Budget Planner</h1>
+
+<div class="card">
+  <label for="incomeInput">Monthly Income</label>
+  <input type="number" id="incomeInput" placeholder="e.g. 30000">
+  <button class="btn-primary" onclick="saveIncome()">Save Income</button>
+</div>
+
+<div class="card">
+  <label for="expenseName">Expense Name</label>
+  <input type="text" id="expenseName" placeholder="e.g. Groceries">
+
+  <label for="expenseAmount">Amount</label>
+  <input type="number" id="expenseAmount" placeholder="e.g. 1500">
+
+  <label for="expenseCategory">Category</label>
+  <select id="expenseCategory">
+    <option>Food</option>
+    <option>Rent</option>
+    <option>Transport</option>
+    <option>Utilities</option>
+    <option>Entertainment</option>
+    <option>Shopping</option>
+    <option>Health</option>
+    <option>Other</option>
+  </select>
+
+  <button class="btn-primary" onclick="addExpense()">Add Expense</button>
+</div>
+
+<div class="card">
+  <div class="summary-row">
+    <span>Income:</span>
+    <span id="summaryIncome">₹0</span>
+  </div>
+  <div class="summary-row">
+    <span>Total Expenses:</span>
+    <span id="summaryExpenses">₹0</span>
+  </div>
+  <div class="summary-row">
+    <span>Balance:</span>
+    <span id="summaryBalance">₹0</span>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your Expenses</h3>
+  <div id="expenseList"></div>
+</div>
+
+<div class="card">
+  <button class="btn-danger" onclick="resetAll()">Reset Everything</button>
+</div>
+
+<script>
+  function loadData() {
+    const data = localStorage.getItem('budgetData');
+    return data ? JSON.parse(data) : { income: 0, expenses: [] };
+  }
+
+  function saveData(data) {
+    localStorage.setItem('budgetData', JSON.stringify(data));
+  }
+
+  function saveIncome() {
+    const value = parseFloat(document.getElementById('incomeInput').value);
+    if (isNaN(value) || value < 0) {
+      alert('Please enter a valid income amount.');
+      return;
+    }
+    const data = loadData();
+    data.income = value;
+    saveData(data);
+    document.getElementById('incomeInput').value = '';
+    render();
+  }
+
+  function addExpense() {
+    const name = document.getElementById('expenseName').value.trim();
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const category = document.getElementById('expenseCategory').value;
+
+    if (!name) {
+      alert('Please enter an expense name.');
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+
+    const data = loadData();
+    data.expenses.push({
+      id: Date.now(),
+      name: name,
+      amount: amount,
+      category: category
+    });
+    saveData(data);
+
+    document.getElementById('expenseName').value = '';
+    document.getElementById('expenseAmount').value = '';
+
+    render();
+  }
+
+  function deleteExpense(id) {
+    const data = loadData();
+    data.expenses = data.expenses.filter(e => e.id !== id);
+    saveData(data);
+    render();
+  }
+
+  function resetAll() {
+    if (confirm('This will delete all your data. Are you sure?')) {
+      localStorage.removeItem('budgetData');
+      render();
+    }
+  }
+
+  function render() {
+    const data = loadData();
+    const totalExpenses = data.expenses.reduce((sum, e) => sum + e.amount, 0);
+    const balance = data.income - totalExpenses;
+
+    document.getElementById('summaryIncome').textContent = '₹' + data.income.toFixed(2);
+    document.getElementById('summaryExpenses').textContent = '₹' + totalExpenses.toFixed(2);
+
+    const balanceEl = document.getElementById('summaryBalance');
+    balanceEl.textContent = '₹' + balance.toFixed(2);
+    balanceEl.className = balance >= 0 ? 'balance-positive' : 'balance-negative';
+
+    const listEl = document.getElementById('expenseList');
+    if (data.expenses.length === 0) {
+      listEl.innerHTML = '<div class="empty-msg">No expenses added yet.</div>';
+    } else {
+      listEl.innerHTML = data.expenses.map(e => `
+        <div class="expense-item">
+          <div class="expense-info">
+            ${e.name}
+            <span class="expense-category">${e.category}</span>
+          </div>
+          <div style="display:flex; align-items:center;">
+            <span>₹${e.amount.toFixed(2)}</span>
+            <button class="delete-btn" onclick="deleteExpense(${e.id})">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  render();
+</script>
+
+</body>
+</html>
